@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Button, Modal, TouchableOpacity, Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { allExercises } from '../constants/exercises';
+import { allExercises, exerciseDetails } from '../constants/exercises';
 
 interface OngoingExercise {
   exercise: string;
@@ -40,6 +40,7 @@ const NewSetScreen = () => {
       const completedExercise = {
         ...ongoingExercise,
         date: new Date().toISOString(),
+        muscleGroup: exerciseDetails[ongoingExercise.exercise as keyof typeof exerciseDetails].muscleGroup,
       };
       try {
         const existingData = await AsyncStorage.getItem('completedExercises');

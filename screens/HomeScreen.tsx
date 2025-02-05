@@ -59,17 +59,22 @@ const HomeScreen = () => {
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.logo}>Titan Track</Text>
+      
       <Text style={styles.title}>Completed Exercises</Text>
-      {completedExercises.map((exercise, index) => (
+      {completedExercises.map((item, index) => (
         <View key={index} style={styles.exerciseContainer}>
-          <Text style={styles.exerciseTitle}>{exercise.exercise}</Text>
-          <Text>Date: {new Date(exercise.date).toLocaleDateString()}</Text>
-          {exercise.completedSets.map((set, setIndex) => (
-            <Text key={setIndex}>
+          <Text style={styles.exerciseTitle}>{item.exercise}</Text>
+          <Text style={styles.exerciseText}>Date: {new Date(item.date).toLocaleDateString()}</Text>
+          
+          {item.completedSets.map((set, setIndex) => (
+            <Text key={setIndex} style={styles.exerciseText}>
               Set {setIndex + 1}: {set.reps} reps, {set.weight} kg
             </Text>
           ))}
-          <Button title="Delete" onPress={() => deleteExercise(index)} />
+          
+          <View style={styles.deleteButton}>
+            <Button title="Delete" onPress={() => deleteExercise(index)} />
+          </View>
         </View>
       ))}
     </ScrollView>
@@ -97,9 +102,14 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   exerciseTitle: {
-    fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 5,
+  },
+  exerciseText: {
+    fontSize: 18,
+  },
+  deleteButton: {
+    marginTop: 10,
   },
 });
 
