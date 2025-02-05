@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from '@/screens/HomeScreen';
 import ExercisesScreen from '@/screens/ExercisesScreen';
 import NewSetScreen from '@/screens/NewSetScreen';
+import AnalyticsScreen from '@/screens/AnalyticsScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -14,6 +15,7 @@ const Layout = () => {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Exercises" component={ExercisesScreen} />
       <Tab.Screen name="New Set" component={NewSetScreen} />
+      <Tab.Screen name="Analytics" component={AnalyticsScreen} />
     </Tab.Navigator>
   );
 };
