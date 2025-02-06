@@ -1,6 +1,6 @@
 // components/NewSetScreen.tsx
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Button, Modal, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Button, Modal, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { allExercises, exerciseDetails } from '../constants/exercises';
@@ -57,50 +57,17 @@ const NewSetScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Start a New Set</Text>
+      {/* <Text style={styles.title}>Configuration</Text> */}
       
       {selectedExercise && (
         <Text style={styles.selectedExerciseText}>
-          Selected Exercise: {selectedExercise}
+          Selected: {selectedExercise}
         </Text>
       )}
 
-      <TouchableOpacity onPress={() => setPickerVisible(true)} style={styles.selectButton}>
-        <Text style={styles.selectButtonText}>Select Exercise</Text>
-      </TouchableOpacity>
-
-      <TextInput
-        style={styles.selectInput}
-        placeholder="Enter number of sets"
-        keyboardType="numeric"
-        onChangeText={(text) => setPlannedSets(Number(text))}
-      />
-
-      <Button
-        title="Start Exercise"
-        onPress={startExercise}
-        disabled={!selectedExercise || plannedSets <= 0}
-      />
-
-      <Modal visible={isPickerVisible} transparent={true} animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedExercise}
-              onValueChange={(itemValue) => setSelectedExercise(itemValue)}
-            >
-              {allExercises.map((exercise) => (
-                <Picker.Item key={exercise} label={exercise} value={exercise} />
-              ))}
-            </Picker>
-            <Button title="Done" onPress={() => setPickerVisible(false)} />
-          </View>
-        </View>
-      </Modal>
-
-      {ongoingExercise && (
-        <View style={styles.ongoingContainer}>
-          <Text style={styles.ongoingTitle}>Ongoing: {ongoingExercise.exercise}</Text>
+      {ongoingExercise ? (
+        <>
+        <ScrollView style={styles.ongoingContainer}>
           {ongoingExercise.completedSets.map((set, index) => (
             <View key={index} style={styles.setContainer}>
               <Text>Set {index + 1}:</Text>
@@ -118,9 +85,45 @@ const NewSetScreen = () => {
               />
             </View>
           ))}
-          <Button title="Complete Set" onPress={completeSet} />
-        </View>
+        </ScrollView>
+        <Button title="Complete Set" onPress={completeSet} />
+        </>
+      ) : (
+        <>
+        <TextInput
+          style={styles.selectInput}
+          placeholder="Enter number of sets"
+          keyboardType="numeric"
+          onChangeText={(text) => setPlannedSets(Number(text))}
+        />
+
+        <TouchableOpacity onPress={() => setPickerVisible(true)} style={styles.selectButton}>
+          <Text style={styles.selectButtonText}>Browse Exercises</Text>
+        </TouchableOpacity>
+
+        <Button
+          title="Start Exercise"
+          onPress={startExercise}
+          disabled={!selectedExercise || plannedSets <= 0}
+        />
+      </>
       )}
+
+      <Modal visible={isPickerVisible} transparent={true} animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={selectedExercise}
+              onValueChange={(itemValue) => setSelectedExercise(itemValue)}
+            >
+              {allExercises.map((exercise) => (
+                <Picker.Item key={exercise} label={exercise} value={exercise} />
+              ))}
+            </Picker>
+            <Button title="Done" onPress={() => setPickerVisible(false)} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -128,6 +131,7 @@ const NewSetScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    flexDirection: 'column',
     padding: 20,
   },
   title: {
@@ -154,7 +158,8 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     padding: 14,
     marginBottom: 10,
-    width: '45%',
+    flexGrow: 1,
+    borderRadius: 8
   },
   selectInput: {
     borderWidth: 1,
@@ -176,6 +181,7 @@ const styles = StyleSheet.create({
   },
   ongoingContainer: {
     marginTop: 20,
+    flex: 1,
   },
   ongoingTitle: {
     fontSize: 20,
@@ -184,8 +190,9 @@ const styles = StyleSheet.create({
   setContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     marginBottom: 10,
+    gap: 8
   },
 });
 

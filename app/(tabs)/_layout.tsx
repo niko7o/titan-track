@@ -14,8 +14,8 @@ const Layout = () => {
     <Tab.Navigator>
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Exercises" component={ExercisesScreen} />
-      <Tab.Screen name="New Set" component={NewSetScreen} />
       <Tab.Screen name="Analytics" component={AnalyticsScreen} />
+      <Tab.Screen name="New Set" component={NewSetScreen} />
     </Tab.Navigator>
   );
 };
