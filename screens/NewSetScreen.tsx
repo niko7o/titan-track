@@ -339,7 +339,15 @@ const NewSetScreen = () => {
 
   const handleWeightChange = (setIndex: number, text: string) => {
     if (ongoingExercise) {
-      const weight = parseFloat(text) || 0;
+      // Remove any non-numeric characters except decimal point
+      const sanitizedText = text.replace(/[^\d.]/g, '');
+      // Ensure we don't have multiple decimal points
+      const parts = sanitizedText.split('.');
+      const validText = parts.length > 1 
+        ? `${parts[0]}.${parts.slice(1).join('')}` 
+        : sanitizedText;
+        
+      const weight = parseFloat(validText) || 0;
       recordSet(setIndex, ongoingExercise.completedSets[setIndex].reps, weight);
     }
   };
@@ -550,10 +558,11 @@ const NewSetScreen = () => {
               </TouchableOpacity>
               
               <TextInput
-                style={styles.setInputValue}
-                value={ongoingExercise.completedSets[activeSet].weight.toString()}
+                style={[styles.setInputValue, styles.weightInputValue]}
+                value={ongoingExercise.completedSets[activeSet].weight.toFixed(2)}
                 onChangeText={(text) => handleWeightChange(activeSet, text)}
                 keyboardType="numeric"
+                maxLength={7}
               />
               
               <TouchableOpacity 
@@ -600,7 +609,7 @@ const NewSetScreen = () => {
                 <View key={index} style={styles.previousSetItem}>
                   <Text style={[styles.previousSetLabel, { flex: 0.8 }]}>Set {index + 1}</Text>
                   <Text style={styles.previousSetValue}>{set.reps}</Text>
-                  <Text style={styles.previousSetValue}>{set.weight} kg</Text>
+                  <Text style={styles.previousSetValue}>{set.weight.toFixed(2)} kg</Text>
                 </View>
               ))}
             </View>
@@ -1215,7 +1224,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    paddingHorizontal: 24,
+    paddingHorizontal: 12,
   },
   setInputButton: {
     width: 56,
@@ -1236,6 +1245,10 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  weightInputValue: {
+    width: 120,
+    fontSize: 26,
   },
   nextSetButton: {
     backgroundColor: Colors.primaryBlue,
