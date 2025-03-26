@@ -1,5 +1,5 @@
 // components/ExercisesScreen.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -13,10 +13,15 @@ import {
   FlatList,
   Animated,
   PanResponder,
-  useWindowDimensions
+  useWindowDimensions,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
-import { exerciseDetails } from '@/constants/exercises';
+import { exerciseDetails as builtInExercises, ExerciseDetails, ExercisesStore } from '@/constants/exercises';
 import { Colors } from '@/constants/Colors';
+import { getCustomExercises, getMergedExercises, saveCustomExercise } from '@/utils/storage';
 
 // Header component similar to other screens
 const Header = ({ title }: { title: string }) => (
@@ -29,16 +34,24 @@ const Header = ({ title }: { title: string }) => (
   </SafeAreaView>
 );
 
-// Dynamically extract unique muscle groups
-const muscleGroups = Array.from(
-  new Set(Object.values(exerciseDetails).map((detail) => detail.muscleGroup))
-);
-
 const ExercisesScreen = () => {
+  // State for exercises
+  const [allExercises, setAllExercises] = useState<ExercisesStore>(builtInExercises);
+  const [loading, setLoading] = useState<boolean>(true);
+  
+  // State for UI
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string | null>(null);
   const [isDrawerVisible, setDrawerVisible] = useState<boolean>(false);
+  
+  // State for the form mode
+  const [isAddMode, setIsAddMode] = useState<boolean>(false);
+  
+  // Form state
+  const [newExerciseName, setNewExerciseName] = useState<string>('');
+  const [newExerciseDescription, setNewExerciseDescription] = useState<string>('');
+  const [newExerciseMuscleGroup, setNewExerciseMuscleGroup] = useState<string>('');
 
   const { height } = useWindowDimensions();
   
@@ -46,8 +59,41 @@ const ExercisesScreen = () => {
   const drawerHeight = useRef(new Animated.Value(height)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
-  const openDrawer = (exercise: string) => {
-    setSelectedExercise(exercise);
+  // Dynamically extract unique muscle groups
+  const muscleGroups = Array.from(
+    new Set(Object.values(allExercises).map((detail) => detail.muscleGroup))
+  );
+
+  // Load custom exercises on component mount
+  useEffect(() => {
+    const loadExercises = async () => {
+      setLoading(true);
+      try {
+        const mergedExercises = await getMergedExercises(builtInExercises);
+        setAllExercises(mergedExercises);
+      } catch (error) {
+        console.error("Error loading exercises:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadExercises();
+  }, []);
+
+  const openDrawer = (exercise?: string) => {
+    if (exercise) {
+      setSelectedExercise(exercise);
+      setIsAddMode(false);
+    } else {
+      setSelectedExercise(null);
+      setIsAddMode(true);
+      // Reset form fields
+      setNewExerciseName('');
+      setNewExerciseDescription('');
+      setNewExerciseMuscleGroup(selectedMuscleGroup || '');
+    }
+    
     setDrawerVisible(true);
     drawerHeight.setValue(height); // Reset position before animating
     backdropOpacity.setValue(0); // Reset opacity before animating
@@ -126,17 +172,59 @@ const ExercisesScreen = () => {
     setSelectedMuscleGroup(selectedMuscleGroup === muscleGroup ? null : muscleGroup);
   };
 
-  const filteredExercises = Object.keys(exerciseDetails).filter((exercise) => {
+  const handleAddExercise = async () => {
+    if (!newExerciseName.trim()) {
+      Alert.alert('Error', 'Please enter an exercise name');
+      return;
+    }
+
+    if (!newExerciseMuscleGroup.trim()) {
+      Alert.alert('Error', 'Please select a muscle group');
+      return;
+    }
+
+    if (!newExerciseDescription.trim()) {
+      Alert.alert('Error', 'Please provide a description');
+      return;
+    }
+
+    try {
+      const success = await saveCustomExercise(
+        newExerciseName.trim(),
+        newExerciseDescription.trim(),
+        newExerciseMuscleGroup.trim()
+      );
+
+      if (success) {
+        // Reload exercises list
+        const mergedExercises = await getMergedExercises(builtInExercises);
+        setAllExercises(mergedExercises);
+        
+        // Close drawer
+        closeDrawerFast();
+        
+        // Show success message
+        Alert.alert('Success', 'Custom exercise added successfully');
+      } else {
+        Alert.alert('Error', 'Failed to save custom exercise');
+      }
+    } catch (error) {
+      console.error('Error saving exercise:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
+    }
+  };
+
+  const filteredExercises = Object.keys(allExercises).filter((exercise) => {
     const matchesSearch = exercise.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesMuscleGroup = selectedMuscleGroup
-      ? exerciseDetails[exercise as keyof typeof exerciseDetails].muscleGroup === selectedMuscleGroup
+      ? allExercises[exercise].muscleGroup === selectedMuscleGroup
       : true;
     return matchesSearch && matchesMuscleGroup;
   });
 
   // Group exercises by muscle group for better organization
   const groupedExercises = filteredExercises.reduce((acc, exercise) => {
-    const muscleGroup = exerciseDetails[exercise as keyof typeof exerciseDetails].muscleGroup;
+    const muscleGroup = allExercises[exercise].muscleGroup;
     if (!acc[muscleGroup]) {
       acc[muscleGroup] = [];
     }
@@ -218,9 +306,12 @@ const ExercisesScreen = () => {
       onPress={() => handleExercisePress(item)}
     >
       <View style={styles.exerciseContent}>
-        <Text style={styles.exerciseName}>{item}</Text>
+        <Text style={styles.exerciseName}>
+          {item}
+          {allExercises[item].isCustom && <Text style={styles.customBadge}> (Custom)</Text>}
+        </Text>
         <Text style={styles.exerciseMuscleGroup}>
-          {exerciseDetails[item as keyof typeof exerciseDetails].muscleGroup}
+          {allExercises[item].muscleGroup}
         </Text>
       </View>
       <Text style={styles.exerciseArrow}>›</Text>
@@ -228,104 +319,222 @@ const ExercisesScreen = () => {
   );
 
   const renderExerciseList = () => {
-    if (selectedMuscleGroup) {
-      // If a muscle group is selected, only show those exercises
+    if (loading) {
       return (
-        <View style={styles.exerciseListContainer}>
-          <Text style={styles.sectionTitle}>
-            {selectedMuscleGroup} Exercises ({filteredExercises.length})
-          </Text>
-          <FlatList
-            data={filteredExercises}
-            keyExtractor={(item) => item}
-            renderItem={renderExerciseItem}
-            style={styles.exerciseList}
-            contentContainerStyle={{ paddingBottom: 20 }}
-          />
+        <View style={styles.exercisesAndButtonContainer}>
+          <View style={[styles.exerciseListContainer, styles.loadingContainer]}>
+            <ActivityIndicator size="large" color={Colors.primaryBlue} />
+            <Text style={styles.loadingText}>Loading exercises...</Text>
+          </View>
+          
+          <TouchableOpacity 
+            style={[styles.addExerciseButton, styles.disabledButton]}
+            disabled={true}
+          >
+            <Text style={styles.addExerciseButtonText}>Add Custom Exercise</Text>
+          </TouchableOpacity>
         </View>
       );
     }
 
-    // If no muscle group is selected, group exercises by muscle group
+    // Container for the exercise list and add button
     return (
-      <ScrollView style={styles.exerciseListContainer}>
-        {Object.entries(groupedExercises).map(([muscleGroup, exercises]) => (
-          <View key={muscleGroup} style={styles.exerciseGroupContainer}>
-            <Text style={styles.sectionTitle}>{muscleGroup} ({exercises.length})</Text>
-            {exercises.map((exercise) => (
-              <TouchableOpacity 
-                key={exercise}
-                style={styles.exerciseItem}
-                onPress={() => handleExercisePress(exercise)}
-              >
-                <View style={styles.exerciseContent}>
-                  <Text style={styles.exerciseName}>{exercise}</Text>
+      <View style={styles.exercisesAndButtonContainer}>
+        {/* Exercise list */}
+        <View style={styles.exerciseListContainer}>
+          {filteredExercises.length === 0 ? (
+            <Text style={styles.emptyListText}>No exercises found</Text>
+          ) : selectedMuscleGroup ? (
+            // If a muscle group is selected, only show those exercises
+            <>
+              <Text style={styles.sectionTitle}>
+                {selectedMuscleGroup} Exercises ({filteredExercises.length})
+              </Text>
+              <FlatList
+                data={filteredExercises}
+                keyExtractor={(item) => item}
+                renderItem={renderExerciseItem}
+                style={styles.exerciseList}
+                showsVerticalScrollIndicator={false}
+              />
+            </>
+          ) : (
+            // If no muscle group is selected, group exercises by muscle group
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {Object.entries(groupedExercises).map(([muscleGroup, exercises]) => (
+                <View key={muscleGroup} style={styles.exerciseGroupContainer}>
+                  <Text style={styles.sectionTitle}>{muscleGroup} ({exercises.length})</Text>
+                  {exercises.map((exercise) => (
+                    <TouchableOpacity 
+                      key={exercise}
+                      style={styles.exerciseItem}
+                      onPress={() => handleExercisePress(exercise)}
+                    >
+                      <View style={styles.exerciseContent}>
+                        <Text style={styles.exerciseName}>
+                          {exercise}
+                          {allExercises[exercise].isCustom && <Text style={styles.customBadge}> (Custom)</Text>}
+                        </Text>
+                        <Text style={styles.exerciseMuscleGroup}>
+                          {allExercises[exercise].muscleGroup}
+                        </Text>
+                      </View>
+                      <Text style={styles.exerciseArrow}>›</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-                <Text style={styles.exerciseArrow}>›</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+              ))}
+              <View style={{ height: 10 }} />
+            </ScrollView>
+          )}
+        </View>
+        
+        {/* Add Exercise button - always visible below the list */}
+        <TouchableOpacity 
+          style={styles.addExerciseButton}
+          onPress={() => openDrawer()}
+        >
+          <Text style={styles.addExerciseButtonText}>Add Custom Exercise</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderExerciseForm = () => (
+    <ScrollView 
+      style={styles.formScrollView}
+      showsVerticalScrollIndicator={false}
+    >
+      <Text style={styles.formTitle}>Add Custom Exercise</Text>
+      
+      <Text style={styles.inputLabel}>Exercise Name</Text>
+      <TextInput
+        style={styles.textInput}
+        value={newExerciseName}
+        onChangeText={setNewExerciseName}
+        placeholder="e.g. Cable Crossover"
+        placeholderTextColor="#999"
+      />
+      
+      <Text style={styles.inputLabel}>Muscle Group</Text>
+      <View style={styles.muscleGroupSelectContainer}>
+        {muscleGroups.map((group) => (
+          <TouchableOpacity
+            key={group}
+            style={[
+              styles.muscleGroupSelectButton,
+              newExerciseMuscleGroup === group && styles.muscleGroupSelectButtonActive
+            ]}
+            onPress={() => setNewExerciseMuscleGroup(group)}
+          >
+            <Text 
+              style={[
+                styles.muscleGroupSelectText,
+                newExerciseMuscleGroup === group && styles.muscleGroupSelectTextActive
+              ]}
+            >
+              {group}
+            </Text>
+          </TouchableOpacity>
         ))}
+      </View>
+      
+      <Text style={styles.inputLabel}>Description</Text>
+      <TextInput
+        style={[styles.textInput, styles.textAreaInput]}
+        value={newExerciseDescription}
+        onChangeText={setNewExerciseDescription}
+        placeholder="Describe how to perform this exercise..."
+        placeholderTextColor="#999"
+        multiline
+        numberOfLines={4}
+        textAlignVertical="top"
+      />
+      
+      <TouchableOpacity 
+        style={styles.saveButton}
+        onPress={handleAddExercise}
+      >
+        <Text style={styles.saveButtonText}>Save Exercise</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+
+  const renderExerciseDetail = () => {
+    if (!selectedExercise) return null;
+    
+    const exercise = allExercises[selectedExercise];
+    
+    return (
+      <ScrollView 
+        style={styles.drawerScrollView}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>
+            {selectedExercise}
+            {exercise.isCustom && <Text style={styles.customBadge}> (Custom)</Text>}
+          </Text>
+          <Text style={styles.modalSubtitle}>
+            {exercise.muscleGroup}
+          </Text>
+        </View>
+        
+        <Image
+          source={{ uri: exercise.media }}
+          style={styles.mediaImage}
+          resizeMode="cover"
+        />
+        
+        <Text style={styles.descriptionTitle}>How to perform</Text>
+        <Text style={styles.modalDescription}>
+          {exercise.description}
+        </Text>
       </ScrollView>
     );
   };
 
   const renderExerciseDrawer = () => {
-    if (!selectedExercise) return null;
-    
     return (
-      <Animated.View 
-        style={[
-          styles.drawerContainer,
-          { transform: [{ translateY: drawerHeight }] }
-        ]}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.drawerKeyboardAvoidingView}
+        pointerEvents="box-none"
       >
-        {/* Drawer Drag handle */}
-        <View 
-          style={styles.drawerHandleContainer}
-          {...panResponder.panHandlers}
+        <Animated.View 
+          style={[
+            styles.drawerContainer,
+            { transform: [{ translateY: drawerHeight }] }
+          ]}
         >
-          <View style={styles.drawerHandle} />
-        </View>
-        
-        {/* Drawer Close button */}
-        <TouchableOpacity 
-          style={styles.closeButton} 
-          onPress={closeDrawerFast}
-        >
-          <Text style={styles.closeButtonText}>✕</Text>
-        </TouchableOpacity>
-        
-        <ScrollView 
-          style={styles.drawerScrollView}
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-        >
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{selectedExercise}</Text>
-            <Text style={styles.modalSubtitle}>
-              {exerciseDetails[selectedExercise as keyof typeof exerciseDetails].muscleGroup}
-            </Text>
+          {/* Drawer Drag handle */}
+          <View 
+            style={styles.drawerHandleContainer}
+            {...panResponder.panHandlers}
+          >
+            <View style={styles.drawerHandle} />
           </View>
           
-          <Image
-            source={{ uri: exerciseDetails[selectedExercise as keyof typeof exerciseDetails].media }}
-            style={styles.mediaImage}
-            resizeMode="cover"
-          />
+          {/* Drawer Close button */}
+          <TouchableOpacity 
+            style={styles.closeButton} 
+            onPress={closeDrawerFast}
+          >
+            <Text style={styles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
           
-          <Text style={styles.descriptionTitle}>How to perform</Text>
-          <Text style={styles.modalDescription}>
-            {exerciseDetails[selectedExercise as keyof typeof exerciseDetails].description}
-          </Text>
-        </ScrollView>
-      </Animated.View>
+          {/* Drawer Content - either form or details */}
+          {isAddMode ? renderExerciseForm() : renderExerciseDetail()}
+        </Animated.View>
+      </KeyboardAvoidingView>
     );
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
+      <Header title="Exercises" />
       
       <View style={styles.contentContainer}>
         {renderSearchBar()}
@@ -333,24 +542,24 @@ const ExercisesScreen = () => {
         {renderExerciseList()}
       </View>
       
-      {/* Backdrop with fade animation - only visible when drawer is open */}
+      {/* Backdrop and Drawer positioned absolutely over the content */}
       {isDrawerVisible && (
-        <Animated.View 
-          style={[
-            styles.backdrop,
-            { opacity: backdropOpacity }
-          ]}
-        >
-          <TouchableOpacity 
-            style={styles.backdropTouchable}
-            activeOpacity={1}
-            onPress={closeDrawerFast}
-          />
-        </Animated.View>
+        <>
+          <Animated.View 
+            style={[
+              styles.backdrop,
+              { opacity: backdropOpacity }
+            ]}
+          >
+            <TouchableOpacity 
+              style={styles.backdropTouchable}
+              activeOpacity={1}
+              onPress={closeDrawerFast}
+            />
+          </Animated.View>
+          {renderExerciseDrawer()}
+        </>
       )}
-      
-      {/* Exercise Details Drawer */}
-      {isDrawerVisible && renderExerciseDrawer()}
     </View>
   );
 };
@@ -457,6 +666,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 16,
     padding: 20,
+    marginBottom: 16, // Add margin to separate from the button
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -465,6 +675,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#666',
+    fontSize: 16,
+  },
+  emptyListText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 20,
   },
   exerciseGroupContainer: {
     marginBottom: 24,
@@ -488,6 +713,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#333',
   },
+  customBadge: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: Colors.primaryBlue,
+  },
   exerciseMuscleGroup: {
     fontSize: 14,
     color: '#888',
@@ -505,11 +735,20 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.25)',
-    zIndex: 1,
+    zIndex: 5,
   },
   backdropTouchable: {
     width: '100%',
     height: '100%',
+  },
+  drawerKeyboardAvoidingView: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+    pointerEvents: 'box-none',
   },
   drawerContainer: {
     position: 'absolute',
@@ -520,7 +759,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     height: '80%',
-    zIndex: 2,
+    zIndex: 10,
     overflow: 'hidden',
   },
   drawerHandleContainer: {
@@ -589,6 +828,93 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: '#555',
     marginBottom: 24,
+  },
+  addExerciseButton: {
+    backgroundColor: Colors.primaryBlue,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginTop: 0, // Remove top margin since we have bottom margin on the container above
+    marginBottom: 4, // Add a small bottom margin
+  },
+  addExerciseButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  // Form styles
+  formScrollView: {
+    flex: 1,
+    padding: 20,
+  },
+  formTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#555',
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  textAreaInput: {
+    height: 120,
+    padding: 16,
+  },
+  muscleGroupSelectContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 16,
+  },
+  muscleGroupSelectButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  muscleGroupSelectButtonActive: {
+    backgroundColor: Colors.primaryBlue,
+  },
+  muscleGroupSelectText: {
+    color: '#666',
+    fontWeight: '500',
+  },
+  muscleGroupSelectTextActive: {
+    color: 'white',
+  },
+  saveButton: {
+    backgroundColor: Colors.primaryBlue,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 50, // Extra space at the bottom for keyboard
+  },
+  saveButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  exercisesAndButtonContainer: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
   },
 });
 

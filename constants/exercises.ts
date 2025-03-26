@@ -1,4 +1,17 @@
-export const exerciseDetails = {
+// Define the interface for exercise details
+export interface ExerciseDetails {
+  description: string;
+  media: string;
+  muscleGroup: string;
+  isCustom?: boolean;
+}
+
+export type ExercisesStore = Record<string, ExerciseDetails>;
+
+// Default image for custom exercises
+export const DEFAULT_EXERCISE_IMAGE = 'https://placehold.jp/300x300.jpg';
+
+export const exerciseDetails: ExercisesStore = {
   'Bench Press': {
     description: 'A compound exercise for chest development, primarily targeting the pectoral muscles.',
     media: 'https://placehold.jp/300x300.jpg',
@@ -92,3 +105,15 @@ export const exerciseDetails = {
 };
 
 export const allExercises = Object.keys(exerciseDetails);
+
+// Helper function to create a custom exercise
+export const createCustomExercise = (
+  name: string, 
+  description: string, 
+  muscleGroup: string
+): ExerciseDetails => ({
+  description,
+  media: DEFAULT_EXERCISE_IMAGE,
+  muscleGroup,
+  isCustom: true,
+});
