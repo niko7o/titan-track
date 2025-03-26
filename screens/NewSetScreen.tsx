@@ -3,8 +3,6 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  TextInput, 
-  Button, 
   TouchableOpacity, 
   Alert, 
   ScrollView, 
@@ -16,6 +14,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { allExercises, exerciseDetails } from '../constants/exercises';
+import { Colors } from '@/constants/Colors';
 
 interface OngoingExercise {
   exercise: string;
@@ -25,7 +24,7 @@ interface OngoingExercise {
 
 const NewSetScreen = () => {
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
-  const [plannedSets, setPlannedSets] = useState<number>(0);
+  const [plannedSets, setPlannedSets] = useState<number>(3);
   const [ongoingExercise, setOngoingExercise] = useState<OngoingExercise | null>(null);
   const [isDrawerVisible, setDrawerVisible] = useState<boolean>(false);
 
@@ -112,6 +111,18 @@ const NewSetScreen = () => {
         plannedSets,
         completedSets: Array(plannedSets).fill({ reps: 0, weight: 0 }),
       });
+    } else {
+      Alert.alert('Missing Information', 'Please select an exercise first.');
+    }
+  };
+
+  const incrementSets = () => {
+    setPlannedSets(prev => prev + 1);
+  };
+
+  const decrementSets = () => {
+    if (plannedSets > 1) {
+      setPlannedSets(prev => prev - 1);
     }
   };
 
@@ -149,22 +160,54 @@ const NewSetScreen = () => {
   };
 
   const renderSetup = () => (
-    <>
-      <TextInput
-        style={styles.selectInput}
-        placeholder="Enter number of sets"
-        keyboardType="numeric"
-        onChangeText={(text) => setPlannedSets(Number(text))}
-      />
-      <TouchableOpacity onPress={openDrawer} style={styles.selectButton}>
-        <Text style={styles.selectButtonText}>Browse Exercises</Text>
-      </TouchableOpacity>
-      <Button
-        title="Start Exercise"
+    <View style={styles.setupContainer}>
+      {/* Exercise Selection Card */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Choose an exercise</Text>
+        <TouchableOpacity
+          style={styles.exerciseSelectButton}
+          onPress={openDrawer}
+        >
+          <Text style={styles.exerciseSelectText}>
+            {selectedExercise || 'Select exercise'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Sets Card */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Amount of sets</Text>
+        <View style={styles.setCountContainer}>
+          <TouchableOpacity 
+            style={styles.setCountButton}
+            onPress={decrementSets}
+          >
+            <Text style={styles.setCountButtonText}>-</Text>
+          </TouchableOpacity>
+          
+          <Text style={styles.setCountText}>{plannedSets}</Text>
+          
+          <TouchableOpacity 
+            style={styles.setCountButton}
+            onPress={incrementSets}
+          >
+            <Text style={styles.setCountButtonText}>+</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Start Button */}
+      <TouchableOpacity 
+        style={[
+          styles.startButton,
+          (!selectedExercise || plannedSets <= 0) && styles.startButtonDisabled
+        ]}
         onPress={startExercise}
         disabled={!selectedExercise || plannedSets <= 0}
-      />
-    </>
+      >
+        <Text style={styles.startButtonText}>Start exercise</Text>
+      </TouchableOpacity>
+    </View>
   );
 
   const renderOngoing = () => (
@@ -173,33 +216,36 @@ const NewSetScreen = () => {
         {ongoingExercise?.completedSets.map((set, index) => (
           <View key={index} style={styles.setContainer}>
             <Text>Set {index + 1}:</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Repetitions"
-              keyboardType="numeric"
-              onChangeText={(text) => recordSet(index, Number(text), set.weight)}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Weight"
-              keyboardType="numeric"
-              onChangeText={(text) => recordSet(index, set.reps, Number(text))}
-            />
+            <View style={styles.setInputContainer}>
+              <TouchableOpacity style={styles.setInputButton}>
+                <Text style={styles.setInputButtonText}>-</Text>
+              </TouchableOpacity>
+              <Text style={styles.setInputValue}>{set.reps}</Text>
+              <TouchableOpacity style={styles.setInputButton}>
+                <Text style={styles.setInputButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.setInputContainer}>
+              <TouchableOpacity style={styles.setInputButton}>
+                <Text style={styles.setInputButtonText}>-</Text>
+              </TouchableOpacity>
+              <Text style={styles.setInputValue}>{set.weight}</Text>
+              <TouchableOpacity style={styles.setInputButton}>
+                <Text style={styles.setInputButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ))}
       </ScrollView>
-      <Button title="Complete Set" onPress={completeSet} />
+      <TouchableOpacity style={styles.startButton} onPress={completeSet}>
+        <Text style={styles.startButtonText}>Complete Set</Text>
+      </TouchableOpacity>
     </>
   );
 
   return (
     <View style={styles.container}>
-      {selectedExercise && (
-        <Text style={styles.selectedExerciseText}>
-          Selected: {selectedExercise}
-        </Text>
-      )}
-
+      
       {ongoingExercise ? renderOngoing() : renderSetup()}
       
       {/* Backdrop with fade animation - only visible when drawer is open */}
@@ -290,40 +336,87 @@ const NewSetScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'column',
+    backgroundColor: '#f5f5f5',
+  },
+  screenTitle: {
+    fontSize: 18,
+    textAlign: 'center',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: 'white',
+  },
+  setupContainer: {
     padding: 20,
   },
-  selectedExerciseText: {
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 24,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  cardTitle: {
     fontSize: 16,
-    marginBottom: 10,
-    color: '#007BFF',
+    fontWeight: '500',
+    color: '#2962ff',
+    marginBottom: 12,
   },
-  selectButton: {
-    backgroundColor: '#007BFF',
-    padding: 14,
-    borderRadius: 5,
-    marginBottom: 20,
+  exerciseSelectButton: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
   },
-  selectButtonText: {
+  exerciseSelectText: {
+    color: '#333',
+    fontSize: 16,
+  },
+  setCountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  setCountButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: Colors.primaryBlue,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  setCountButtonText: {
     color: 'white',
-    textAlign: 'center',
-    fontSize: 16,
+    fontSize: 24,
+    fontWeight: 'bold',
+    paddingBottom: 3,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 14,
-    marginBottom: 10,
-    flexGrow: 1,
-    borderRadius: 8
+  setCountText: {
+    fontSize: 32,
+    fontWeight: 'bold',
   },
-  selectInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 14,
-    marginBottom: 10,
-    width: '100%',
+  startButton: {
+    backgroundColor: Colors.primaryBlue,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  startButtonDisabled: {
+    opacity: 0.6,
+    backgroundColor: Colors.gray,
+  },
+  startButtonText: {
     fontSize: 16,
+    fontWeight: '500',
+    color: 'white',
   },
   backdrop: {
     position: 'absolute',
@@ -396,15 +489,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   selectedExerciseItemText: {
-    color: '#007BFF',
+    color: '#2962ff',
   },
   checkmark: {
-    color: '#007BFF',
+    color: '#2962ff',
     fontSize: 18,
     fontWeight: 'bold',
   },
   doneButton: {
-    backgroundColor: '#007BFF',
+    backgroundColor: '#2962ff',
     margin: 16,
     padding: 12,
     borderRadius: 8,
@@ -427,14 +520,36 @@ const styles = StyleSheet.create({
   },
   ongoingContainer: {
     marginTop: 20,
+    padding: 20,
     flex: 1,
   },
   setContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     marginBottom: 10,
-    gap: 8
+  },
+  setInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  setInputButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#2962ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  setInputButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  setInputValue: {
+    paddingHorizontal: 16,
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
 
