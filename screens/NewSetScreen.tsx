@@ -12,12 +12,14 @@ import {
   useWindowDimensions,
   TextInput,
   StatusBar,
-  SafeAreaView
+  SafeAreaView,
+  ActivityIndicator
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { allExercises, exerciseDetails } from '../constants/exercises';
+import { exerciseDetails as builtInExercises, ExerciseDetails, ExercisesStore } from '../constants/exercises';
 import { Colors } from '@/constants/Colors';
+import { getMergedExercises } from '@/utils/storage';
 
 interface OngoingExercise {
   exercise: string;
@@ -74,6 +76,10 @@ const Header = ({
 );
 
 const NewSetScreen = () => {
+  const [allExercises, setAllExercises] = useState<ExercisesStore>(builtInExercises);
+  const [exercisesList, setExercisesList] = useState<string[]>(Object.keys(builtInExercises));
+  const [loadingExercises, setLoadingExercises] = useState(true);
+  
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
   const [plannedSets, setPlannedSets] = useState<number>(3);
   const [ongoingExercise, setOngoingExercise] = useState<OngoingExercise | null>(null);
@@ -91,6 +97,56 @@ const NewSetScreen = () => {
   const drawerHeight = useRef(new Animated.Value(height)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   
+  // Load all exercises including custom ones
+  useEffect(() => {
+    const loadAllExercises = async () => {
+      setLoadingExercises(true);
+      try {
+        const mergedExercises = await getMergedExercises(builtInExercises);
+        setAllExercises(mergedExercises);
+        const allExerciseNames = Object.keys(mergedExercises);
+        setExercisesList(allExerciseNames);
+        setFilteredExercises(allExerciseNames);
+      } catch (error) {
+        console.error("Error loading exercises:", error);
+      } finally {
+        setLoadingExercises(false);
+      }
+    };
+
+    loadAllExercises();
+  }, []);
+  
+  // Group exercises by muscle group whenever allExercises changes
+  useEffect(() => {
+    if (loadingExercises) return;
+    
+    // Group exercises by muscle group
+    const muscleGroups = Object.entries(allExercises).reduce((groups: Record<string, string[]>, [name, details]) => {
+      const muscleGroup = details.muscleGroup;
+      if (!groups[muscleGroup]) {
+        groups[muscleGroup] = [];
+      }
+      groups[muscleGroup].push(name);
+      return groups;
+    }, {});
+
+    // Convert to array format
+    const categoriesArray = Object.entries(muscleGroups).map(([name, exercises]) => ({
+      name,
+      exercises
+    }));
+
+    setCategories(categoriesArray);
+    
+    // Initialize filtered exercises
+    if (searchQuery.trim() === "") {
+      setFilteredExercises(exercisesList);
+    } else {
+      filterExercises(searchQuery);
+    }
+  }, [allExercises, loadingExercises]);
+
   const closeDrawerFast = () => {
     Animated.parallel([
       Animated.timing(drawerHeight, {
@@ -300,7 +356,7 @@ const NewSetScreen = () => {
       const completedExercise = {
         ...ongoingExercise,
         date: new Date().toISOString(),
-        muscleGroup: exerciseDetails[ongoingExercise.exercise as keyof typeof exerciseDetails].muscleGroup,
+        muscleGroup: allExercises[ongoingExercise.exercise]?.muscleGroup || '',
       };
       try {
         const existingData = await AsyncStorage.getItem('completedExercises');
@@ -563,38 +619,6 @@ const NewSetScreen = () => {
     );
   };
 
-  useEffect(() => {
-    // Group exercises by muscle group
-    const muscleGroups = Object.values(exerciseDetails).reduce((groups: Record<string, string[]>, exercise) => {
-      const muscleGroup = exercise.muscleGroup;
-      if (!groups[muscleGroup]) {
-        groups[muscleGroup] = [];
-      }
-      const exerciseName = Object.keys(exerciseDetails).find(
-        key => exerciseDetails[key as keyof typeof exerciseDetails] === exercise
-      );
-      if (exerciseName) {
-        groups[muscleGroup].push(exerciseName);
-      }
-      return groups;
-    }, {});
-
-    // Convert to array format
-    const categoriesArray = Object.entries(muscleGroups).map(([name, exercises]) => ({
-      name,
-      exercises
-    }));
-
-    setCategories(categoriesArray);
-    
-    // Initialize filtered exercises
-    if (searchQuery.trim() === "") {
-      setFilteredExercises(allExercises);
-    } else {
-      filterExercises(searchQuery);
-    }
-  }, []);
-
   const filterExercises = (query: string) => {
     setSearchQuery(query);
     
@@ -603,7 +627,7 @@ const NewSetScreen = () => {
         const categoryExercises = categories.find(c => c.name === selectedCategory)?.exercises || [];
         setFilteredExercises(categoryExercises);
       } else {
-        setFilteredExercises(allExercises);
+        setFilteredExercises(exercisesList);
       }
       return;
     }
@@ -617,7 +641,7 @@ const NewSetScreen = () => {
         exercise.toLowerCase().includes(lowerQuery)
       );
     } else {
-      filtered = allExercises.filter(exercise => 
+      filtered = exercisesList.filter(exercise => 
         exercise.toLowerCase().includes(lowerQuery)
       );
     }
@@ -632,11 +656,43 @@ const NewSetScreen = () => {
       const categoryExercises = categories.find(c => c.name === categoryName)?.exercises || [];
       setFilteredExercises(categoryExercises);
     } else {
-      setFilteredExercises(allExercises);
+      setFilteredExercises(exercisesList);
     }
   };
 
   const renderExerciseDrawer = () => {
+    if (loadingExercises) {
+      return (
+        <Animated.View 
+          style={[
+            styles.drawerContainer,
+            { transform: [{ translateY: drawerHeight }] }
+          ]}
+        >
+          {/* Drawer Drag handle */}
+          <View 
+            style={styles.drawerHandleContainer}
+            {...panResponder.panHandlers}
+          >
+            <View style={styles.drawerHandle} />
+          </View>
+          
+          {/* Drawer Close button */}
+          <TouchableOpacity 
+            style={styles.closeButton} 
+            onPress={closeDrawerFast}
+          >
+            <Text style={styles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primaryBlue} />
+            <Text style={styles.loadingText}>Loading exercises...</Text>
+          </View>
+        </Animated.View>
+      );
+    }
+  
     return (
       <Animated.View 
         style={[
@@ -750,9 +806,12 @@ const NewSetScreen = () => {
                     ]}
                   >
                     {item}
+                    {allExercises[item]?.isCustom && (
+                      <Text style={styles.customBadge}> (Custom)</Text>
+                    )}
                   </Text>
                   <Text style={styles.exerciseMuscleGroup}>
-                    {exerciseDetails[item as keyof typeof exerciseDetails]?.muscleGroup || ''}
+                    {allExercises[item]?.muscleGroup || ''}
                   </Text>
                 </View>
                 {selectedExercise === item && (
@@ -1336,6 +1395,21 @@ const styles = StyleSheet.create({
   closeButtonText: {
     fontSize: 20,
     color: '#333',
+  },
+  customBadge: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: Colors.primaryBlue,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#666',
+    fontSize: 16,
   },
 });
 
