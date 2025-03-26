@@ -482,7 +482,7 @@ const ExercisesScreen = () => {
         </View>
         
         <Image
-          source={{ uri: exercise.media }}
+          source={typeof exercise.media === 'string' ? { uri: exercise.media } : exercise.media}
           style={styles.mediaImage}
           resizeMode="cover"
         />
