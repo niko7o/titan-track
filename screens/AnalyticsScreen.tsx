@@ -267,40 +267,50 @@ const AnalyticsScreen = () => {
             
             {chartData.length > 0 ? (
               <>
-                <LineChart
-                  data={{
-                    labels: chartData.map(data => data.date),
-                    datasets: [
-                      {
-                        data: chartData.map(data => data.weight),
-                        color: () => Colors.primaryBlue, // line color
-                        strokeWidth: 2
+                <View style={styles.chartWrapper}>
+                  <LineChart
+                    data={{
+                      labels: chartData.map(data => data.date),
+                      datasets: [
+                        {
+                          data: chartData.map(data => data.weight),
+                          color: () => Colors.primaryBlue,
+                          strokeWidth: 2
+                        }
+                      ],
+                      legend: ["Max Weight (kg)"]
+                    }}
+                    width={Dimensions.get('window').width - 80}
+                    height={220}
+                    yAxisSuffix=" kg"
+                    yAxisInterval={1}
+                    chartConfig={{
+                      backgroundColor: 'white',
+                      backgroundGradientFrom: 'white',
+                      backgroundGradientTo: 'white',
+                      decimalPlaces: 1,
+                      color: (opacity = 1) => `rgba(41, 98, 255, ${opacity})`,
+                      labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                      style: {
+                        borderRadius: 16
+                      },
+                      propsForDots: {
+                        r: '6',
+                        strokeWidth: '2',
+                        stroke: Colors.primaryBlue
+                      },
+                      propsForLabels: {
+                        fontSize: 12
+                      },
+                      propsForBackgroundLines: {
+                        strokeDasharray: "6 6",
+                        strokeWidth: 1
                       }
-                    ],
-                    legend: ["Max Weight (kg)"]
-                  }}
-                  width={Dimensions.get('window').width - 40}
-                  height={220}
-                  yAxisSuffix=" kg"
-                  chartConfig={{
-                    backgroundColor: 'white',
-                    backgroundGradientFrom: 'white',
-                    backgroundGradientTo: 'white',
-                    decimalPlaces: 1,
-                    color: (opacity = 1) => `rgba(41, 98, 255, ${opacity})`,
-                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                    propsForDots: {
-                      r: '5',
-                      strokeWidth: '2',
-                      stroke: Colors.primaryBlue
-                    },
-                    propsForLabels: {
-                      fontSize: 10,
-                    }
-                  }}
-                  style={styles.chart}
-                  bezier
-                />
+                    }}
+                    style={styles.chart}
+                    bezier
+                  />
+                </View>
                 
                 {/* Summary Stats */}
                 <View style={styles.statsContainer}>
@@ -344,7 +354,6 @@ const AnalyticsScreen = () => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <Header title="Analytics" />
       <ScrollView 
         style={styles.contentContainer}
         contentContainerStyle={styles.scrollContent}
@@ -498,12 +507,12 @@ const styles = StyleSheet.create({
   },
   timeRangeContainer: {
     flexDirection: 'row',
-    borderRadius: 8,
+    borderRadius: 20,
     backgroundColor: '#f0f0f0',
     overflow: 'hidden',
   },
   timeRangeButton: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
   },
   activeTimeRange: {
@@ -519,7 +528,7 @@ const styles = StyleSheet.create({
   },
   chartTabsContainer: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
@@ -534,7 +543,7 @@ const styles = StyleSheet.create({
   },
   chartTabText: {
     color: '#777',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   activeTabText: {
     color: Colors.primaryBlue,
@@ -542,7 +551,7 @@ const styles = StyleSheet.create({
   },
   chart: {
     marginVertical: 8,
-    borderRadius: 16,
+    borderRadius: 16
   },
   noChartDataContainer: {
     height: 220,
@@ -572,6 +581,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#777',
     textAlign: 'center',
+  },
+  chartWrapper: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginVertical: 10,
+    alignItems: 'center',
   },
 });
 
