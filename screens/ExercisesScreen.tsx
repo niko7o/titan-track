@@ -17,7 +17,9 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard
 } from 'react-native';
 import { exerciseDetails as builtInExercises, ExerciseDetails, ExercisesStore } from '@/constants/exercises';
 import { Colors } from '@/constants/Colors';
@@ -169,6 +171,7 @@ const ExercisesScreen = () => {
   };
 
   const toggleMuscleGroup = (muscleGroup: string) => {
+    Keyboard.dismiss();
     setSelectedMuscleGroup(selectedMuscleGroup === muscleGroup ? null : muscleGroup);
   };
 
@@ -288,11 +291,16 @@ const ExercisesScreen = () => {
         onChangeText={setSearchQuery}
         clearButtonMode="always"
         placeholderTextColor="#999"
+        returnKeyType="search"
+        onSubmitEditing={Keyboard.dismiss}
       />
       {searchQuery.length > 0 && (
         <TouchableOpacity 
           style={styles.clearButton}
-          onPress={() => setSearchQuery('')}
+          onPress={() => {
+            setSearchQuery('');
+            Keyboard.dismiss();
+          }}
         >
           <Text style={styles.clearButtonText}>✕</Text>
         </TouchableOpacity>
@@ -401,63 +409,66 @@ const ExercisesScreen = () => {
   };
 
   const renderExerciseForm = () => (
-    <ScrollView 
-      style={styles.formScrollView}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={styles.formTitle}>Add Custom Exercise</Text>
-      
-      <Text style={styles.inputLabel}>Exercise Name</Text>
-      <TextInput
-        style={styles.textInput}
-        value={newExerciseName}
-        onChangeText={setNewExerciseName}
-        placeholder="e.g. Cable Crossover"
-        placeholderTextColor="#999"
-      />
-      
-      <Text style={styles.inputLabel}>Muscle Group</Text>
-      <View style={styles.muscleGroupSelectContainer}>
-        {muscleGroups.map((group) => (
-          <TouchableOpacity
-            key={group}
-            style={[
-              styles.muscleGroupSelectButton,
-              newExerciseMuscleGroup === group && styles.muscleGroupSelectButtonActive
-            ]}
-            onPress={() => setNewExerciseMuscleGroup(group)}
-          >
-            <Text 
-              style={[
-                styles.muscleGroupSelectText,
-                newExerciseMuscleGroup === group && styles.muscleGroupSelectTextActive
-              ]}
-            >
-              {group}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      
-      <Text style={styles.inputLabel}>Description</Text>
-      <TextInput
-        style={[styles.textInput, styles.textAreaInput]}
-        value={newExerciseDescription}
-        onChangeText={setNewExerciseDescription}
-        placeholder="Describe how to perform this exercise..."
-        placeholderTextColor="#999"
-        multiline
-        numberOfLines={4}
-        textAlignVertical="top"
-      />
-      
-      <TouchableOpacity 
-        style={styles.saveButton}
-        onPress={handleAddExercise}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <ScrollView 
+        style={styles.formScrollView}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.saveButtonText}>Save Exercise</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <Text style={styles.formTitle}>Add Custom Exercise</Text>
+        
+        <Text style={styles.inputLabel}>Exercise Name</Text>
+        <TextInput
+          style={styles.textInput}
+          value={newExerciseName}
+          onChangeText={setNewExerciseName}
+          placeholder="e.g. Cable Crossover"
+          placeholderTextColor="#999"
+        />
+        
+        <Text style={styles.inputLabel}>Muscle Group</Text>
+        <View style={styles.muscleGroupSelectContainer}>
+          {muscleGroups.map((group) => (
+            <TouchableOpacity
+              key={group}
+              style={[
+                styles.muscleGroupSelectButton,
+                newExerciseMuscleGroup === group && styles.muscleGroupSelectButtonActive
+              ]}
+              onPress={() => setNewExerciseMuscleGroup(group)}
+            >
+              <Text 
+                style={[
+                  styles.muscleGroupSelectText,
+                  newExerciseMuscleGroup === group && styles.muscleGroupSelectTextActive
+                ]}
+              >
+                {group}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        
+        <Text style={styles.inputLabel}>Description</Text>
+        <TextInput
+          style={[styles.textInput, styles.textAreaInput]}
+          value={newExerciseDescription}
+          onChangeText={setNewExerciseDescription}
+          placeholder="Describe how to perform this exercise..."
+          placeholderTextColor="#999"
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+        />
+        
+        <TouchableOpacity 
+          style={styles.saveButton}
+          onPress={handleAddExercise}
+        >
+          <Text style={styles.saveButtonText}>Save Exercise</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </TouchableWithoutFeedback>
   );
 
   const renderExerciseDetail = () => {
@@ -532,35 +543,36 @@ const ExercisesScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <Header title="Exercises" />
-      
-      <View style={styles.contentContainer}>
-        {renderSearchBar()}
-        {renderMuscleGroupFilter()}
-        {renderExerciseList()}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        
+        <View style={styles.contentContainer}>
+          {renderSearchBar()}
+          {renderMuscleGroupFilter()}
+          {renderExerciseList()}
+        </View>
+        
+        {/* Backdrop and Drawer positioned absolutely over the content */}
+        {isDrawerVisible && (
+          <>
+            <Animated.View 
+              style={[
+                styles.backdrop,
+                { opacity: backdropOpacity }
+              ]}
+            >
+              <TouchableOpacity 
+                style={styles.backdropTouchable}
+                activeOpacity={1}
+                onPress={closeDrawerFast}
+              />
+            </Animated.View>
+            {renderExerciseDrawer()}
+          </>
+        )}
       </View>
-      
-      {/* Backdrop and Drawer positioned absolutely over the content */}
-      {isDrawerVisible && (
-        <>
-          <Animated.View 
-            style={[
-              styles.backdrop,
-              { opacity: backdropOpacity }
-            ]}
-          >
-            <TouchableOpacity 
-              style={styles.backdropTouchable}
-              activeOpacity={1}
-              onPress={closeDrawerFast}
-            />
-          </Animated.View>
-          {renderExerciseDrawer()}
-        </>
-      )}
-    </View>
+    </TouchableWithoutFeedback>
   );
 };
 
