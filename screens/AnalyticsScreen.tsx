@@ -14,6 +14,8 @@ import { LineChart } from 'react-native-chart-kit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors } from '@/constants/Colors';
+import { ExercisesStore, exerciseDetails as builtInExercises } from '@/constants/exercises';
+import { getMergedExercises } from '@/utils/storage';
 
 interface CompletedExercise {
   exercise: string;
@@ -40,16 +42,22 @@ const AnalyticsScreen = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'all'>('month');
+  const [allExercises, setAllExercises] = useState<ExercisesStore>(builtInExercises);
 
   useFocusEffect(
     useCallback(() => {
       const fetchExerciseData = async () => {
         setLoading(true);
         try {
+          // Load completed exercises
           const data = await AsyncStorage.getItem('completedExercises');
           if (data) {
             setExerciseData(JSON.parse(data));
           }
+          
+          // Load all exercises including custom ones
+          const mergedExercises = await getMergedExercises(builtInExercises);
+          setAllExercises(mergedExercises);
         } catch (error) {
           console.error('Failed to load exercise data:', error);
         } finally {
@@ -259,7 +267,13 @@ const AnalyticsScreen = () => {
         {selectedExercise && (
           <View style={styles.chartContainer}>
             <View style={styles.chartHeaderContainer}>
-              <Text style={styles.sectionTitle}>{selectedExercise}</Text>
+              <Text style={styles.exerciseTitle}>{selectedExercise}</Text>
+              {allExercises && allExercises[selectedExercise]?.isCustom && (
+                <Text style={styles.customExerciseBadge}>{'(Custom)'}</Text>
+              )}
+            </View>
+            
+            <View style={styles.timeRangeRow}>
               {renderTimeRangeSelector()}
             </View>
             
@@ -501,7 +515,23 @@ const styles = StyleSheet.create({
   },
   chartHeaderContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  exerciseTitle: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#333',
+  },
+  customExerciseBadge: {
+    color: Colors.primaryBlue,
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  timeRangeRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     marginBottom: 16,
   },
