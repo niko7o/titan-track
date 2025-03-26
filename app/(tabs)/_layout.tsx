@@ -14,7 +14,7 @@ const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
   Home: 'home-outline',
   Exercises: 'barbell-outline',
   Analytics: 'stats-chart',
-  'New Set': 'add-circle',
+  'New set': 'add-circle',
 };
 
 const Layout = () => {
@@ -30,7 +30,7 @@ const Layout = () => {
         <Tab.Screen name="Home" component={HomeScreen} />
         <Tab.Screen name="Exercises" component={ExercisesScreen} />
         <Tab.Screen name="Analytics" component={AnalyticsScreen} />
-        <Tab.Screen name="New Set" component={NewSetScreen} />
+        <Tab.Screen name="New set" component={NewSetScreen} />
       </Tab.Navigator>
   );
 };
