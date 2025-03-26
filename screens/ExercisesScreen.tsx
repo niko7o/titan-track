@@ -25,16 +25,6 @@ import { exerciseDetails as builtInExercises, ExerciseDetails, ExercisesStore } 
 import { Colors } from '@/constants/Colors';
 import { getCustomExercises, getMergedExercises, saveCustomExercise } from '@/utils/storage';
 
-// Header component similar to other screens
-const Header = ({ title }: { title: string }) => (
-  <SafeAreaView style={styles.headerSafeArea}>
-    <View style={styles.header}>
-      <View style={styles.headerPlaceholder} />
-      <Text style={styles.headerTitle}>{title}</Text>
-      <View style={styles.headerPlaceholder} />
-    </View>
-  </SafeAreaView>
-);
 
 const ExercisesScreen = () => {
   // State for exercises
