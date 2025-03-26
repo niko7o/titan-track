@@ -354,7 +354,7 @@ const NewSetScreen = () => {
     
     return (
       <Header 
-        title="New Workout"
+        title="Setup your workout"
       />
     );
   };
