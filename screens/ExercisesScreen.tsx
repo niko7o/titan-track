@@ -24,11 +24,14 @@ import {
 import { exerciseDetails as builtInExercises, ExerciseDetails, ExercisesStore } from '@/constants/exercises';
 import { Colors } from '@/constants/Colors';
 import { getCustomExercises, getMergedExercises, saveCustomExercise } from '@/utils/storage';
+import { useNavigation } from '@react-navigation/native';
 
 
 const ExercisesScreen = () => {
+  const navigation = useNavigation();
   // State for exercises
   const [allExercises, setAllExercises] = useState<ExercisesStore>(builtInExercises);
+  const [customExercises, setCustomExercises] = useState<ExercisesStore>({});
   const [loading, setLoading] = useState<boolean>(true);
   
   // State for UI
@@ -62,7 +65,9 @@ const ExercisesScreen = () => {
       setLoading(true);
       try {
         const mergedExercises = await getMergedExercises(builtInExercises);
+        const customs = await getCustomExercises();
         setAllExercises(mergedExercises);
+        setCustomExercises(customs);
       } catch (error) {
         console.error("Error loading exercises:", error);
       } finally {
@@ -207,6 +212,10 @@ const ExercisesScreen = () => {
     }
   };
 
+  const handleViewCustoms = () => {
+    navigation.navigate('custom-exercises' as never);
+  };
+
   const filteredExercises = Object.keys(allExercises).filter((exercise) => {
     const matchesSearch = exercise.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesMuscleGroup = selectedMuscleGroup
@@ -329,7 +338,7 @@ const ExercisesScreen = () => {
             style={[styles.addExerciseButton, styles.disabledButton]}
             disabled={true}
           >
-            <Text style={styles.addExerciseButtonText}>Add Custom Exercise</Text>
+            <Text style={styles.addExerciseButtonText}>Add Custom</Text>
           </TouchableOpacity>
         </View>
       );
@@ -387,13 +396,24 @@ const ExercisesScreen = () => {
           )}
         </View>
         
-        {/* Add Exercise button - always visible below the list */}
-        <TouchableOpacity 
-          style={styles.addExerciseButton}
-          onPress={() => openDrawer()}
-        >
-          <Text style={styles.addExerciseButtonText}>Add Custom Exercise</Text>
-        </TouchableOpacity>
+        {/* Buttons container */}
+        <View style={styles.buttonsContainer}>
+          {Object.keys(customExercises).length > 0 && (
+            <TouchableOpacity 
+              style={styles.viewCustomsButton}
+              onPress={handleViewCustoms}
+            >
+              <Text style={styles.viewCustomsButtonText}>View Custom</Text>
+            </TouchableOpacity>
+          )}
+          
+          <TouchableOpacity 
+            style={[styles.addExerciseButton, Object.keys(customExercises).length > 0 && styles.addExerciseButtonWithCustoms]}
+            onPress={() => openDrawer()}
+          >
+            <Text style={styles.addExerciseButtonText}>Add Custom</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -405,7 +425,7 @@ const ExercisesScreen = () => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.formTitle}>Add Custom Exercise</Text>
+        <Text style={styles.formTitle}>Add Custom</Text>
         
         <Text style={styles.inputLabel}>Exercise Name</Text>
         <TextInput
@@ -837,13 +857,41 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     alignItems: 'center',
-    marginTop: 0, // Remove top margin since we have bottom margin on the container above
-    marginBottom: 4, // Add a small bottom margin
+    flex: 1,
+  },
+  addExerciseButtonWithCustoms: {
+    marginLeft: 10,
   },
   addExerciseButtonText: {
     color: 'white',
     fontWeight: '600',
     fontSize: 16,
+  },
+  viewCustomsButton: {
+    backgroundColor: '#dedede',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  viewCustomsButtonText: {
+    color: '#333',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  buttonsContainer: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  exercisesAndButtonContainer: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
   },
   // Form styles
   formScrollView: {
@@ -909,14 +957,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '600',
     fontSize: 16,
-  },
-  exercisesAndButtonContainer: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  disabledButton: {
-    backgroundColor: '#ccc',
   },
 });
 
