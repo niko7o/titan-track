@@ -269,7 +269,14 @@ const AnalyticsScreen = () => {
             <View style={styles.chartHeaderContainer}>
               <Text style={styles.exerciseTitle}>{selectedExercise}</Text>
               {allExercises && allExercises[selectedExercise]?.isCustom && (
-                <Text style={styles.customExerciseBadge}>{'(Custom)'}</Text>
+                <Text 
+                  style={[
+                    styles.customExerciseBadge,
+                    allExercises[selectedExercise]?.isDeleted && styles.deletedCustomExerciseBadge
+                  ]}
+                >
+                  {allExercises[selectedExercise]?.isDeleted ? '(Deleted Custom)' : '(Custom)'}
+                </Text>
               )}
             </View>
             
@@ -282,6 +289,13 @@ const AnalyticsScreen = () => {
             {chartData.length > 0 ? (
               <>
                 <View style={styles.chartWrapper}>
+                  {allExercises && allExercises[selectedExercise]?.isDeleted && (
+                    <View style={styles.deletedExerciseWarning}>
+                      <Text style={styles.deletedExerciseWarningText}>
+                        This exercise has been deleted. Historical data is still available.
+                      </Text>
+                    </View>
+                  )}
                   <LineChart
                     data={{
                       labels: chartData.map(data => data.date),
@@ -529,6 +543,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginLeft: 8,
   },
+  deletedCustomExerciseBadge: {
+    color: '#eb4d4b',
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 8,
+  },
   timeRangeRow: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
@@ -617,6 +637,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginVertical: 10,
     alignItems: 'center',
+  },
+  deletedExerciseWarning: {
+    backgroundColor: '#f0f0f0',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  deletedExerciseWarningText: {
+    color: '#777',
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
 

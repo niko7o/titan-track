@@ -127,12 +127,31 @@ const NewSetScreen = () => {
     }
   }, [isFocused]);
   
+  // Clear selected exercise if it's been deleted
+  useEffect(() => {
+    if (selectedExercise && allExercises[selectedExercise]?.isDeleted) {
+      setSelectedExercise(null);
+    }
+  }, [allExercises, selectedExercise]);
+  
   // Group exercises by muscle group whenever allExercises changes
   useEffect(() => {
     if (loadingExercises) return;
     
-    // Group exercises by muscle group
-    const muscleGroups = Object.entries(allExercises).reduce((groups: Record<string, string[]>, [name, details]) => {
+    // Filter out deleted exercises
+    const exercisesWithoutDeleted = Object.entries(allExercises).reduce((acc, [name, details]) => {
+      if (!details.isDeleted) {
+        acc[name] = details;
+      }
+      return acc;
+    }, {} as ExercisesStore);
+    
+    // Update the list of exercise names (excluding deleted ones)
+    const filteredExerciseNames = Object.keys(exercisesWithoutDeleted);
+    setExercisesList(filteredExerciseNames);
+    
+    // Group exercises by muscle group (excluding deleted ones)
+    const muscleGroups = Object.entries(exercisesWithoutDeleted).reduce((groups: Record<string, string[]>, [name, details]) => {
       const muscleGroup = details.muscleGroup;
       if (!groups[muscleGroup]) {
         groups[muscleGroup] = [];
@@ -151,7 +170,7 @@ const NewSetScreen = () => {
     
     // Initialize filtered exercises
     if (searchQuery.trim() === "") {
-      setFilteredExercises(exercisesList);
+      setFilteredExercises(filteredExerciseNames);
     } else {
       filterExercises(searchQuery);
     }
@@ -390,6 +409,16 @@ const NewSetScreen = () => {
   };
 
   const selectExercise = (exerciseName: string) => {
+    // Check if the exercise exists and is not deleted
+    if (allExercises[exerciseName]?.isDeleted) {
+      Alert.alert(
+        "Exercise Unavailable", 
+        "This exercise has been deleted and is no longer available.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+    
     setSelectedExercise(exerciseName);
     // closeDrawerFast();
   };
@@ -641,12 +670,15 @@ const NewSetScreen = () => {
   const filterExercises = (query: string) => {
     setSearchQuery(query);
     
+    // We need to work with the filtered list that excludes deleted exercises
+    const exercisesToFilter = exercisesList; // This list already excludes deleted exercises
+    
     if (query.trim() === "") {
       if (selectedCategory) {
         const categoryExercises = categories.find(c => c.name === selectedCategory)?.exercises || [];
         setFilteredExercises(categoryExercises);
       } else {
-        setFilteredExercises(exercisesList);
+        setFilteredExercises(exercisesToFilter);
       }
       return;
     }
@@ -660,7 +692,7 @@ const NewSetScreen = () => {
         exercise.toLowerCase().includes(lowerQuery)
       );
     } else {
-      filtered = exercisesList.filter(exercise => 
+      filtered = exercisesToFilter.filter(exercise => 
         exercise.toLowerCase().includes(lowerQuery)
       );
     }
@@ -675,6 +707,7 @@ const NewSetScreen = () => {
       const categoryExercises = categories.find(c => c.name === categoryName)?.exercises || [];
       setFilteredExercises(categoryExercises);
     } else {
+      // Use the list that already excludes deleted exercises
       setFilteredExercises(exercisesList);
     }
   };
@@ -1381,7 +1414,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#333',
   },

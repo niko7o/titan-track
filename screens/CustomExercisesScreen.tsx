@@ -150,6 +150,16 @@ const CustomExercisesScreen = () => {
   ).current;
 
   const handleExercisePress = (exercise: string) => {
+    // Check if exercise exists in customExercises
+    if (!customExercises[exercise]) {
+      Alert.alert(
+        "Exercise Not Found",
+        "This exercise may have been deleted or is no longer available.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+    
     openDrawer(exercise);
   };
 
@@ -306,6 +316,21 @@ const CustomExercisesScreen = () => {
     
     const exercise = customExercises[selectedExercise];
     
+    // Add a safety check for when exercise might be undefined
+    if (!exercise) {
+      return (
+        <View style={styles.drawerScrollView}>
+          <Text style={styles.errorText}>Exercise not found or has been deleted.</Text>
+          <TouchableOpacity 
+            style={styles.goBackButton}
+            onPress={closeDrawerFast}
+          >
+            <Text style={styles.goBackButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    
     return (
       <ScrollView 
         style={styles.drawerScrollView}
@@ -351,6 +376,21 @@ const CustomExercisesScreen = () => {
 
   const renderEditForm = () => {
     if (!selectedExercise) return null;
+    
+    // Check if the exercise still exists
+    if (!customExercises[selectedExercise]) {
+      return (
+        <View style={styles.formScrollView}>
+          <Text style={styles.errorText}>Exercise not found or has been deleted.</Text>
+          <TouchableOpacity 
+            style={styles.goBackButton}
+            onPress={closeDrawerFast}
+          >
+            <Text style={styles.goBackButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
     
     return (
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -815,6 +855,12 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '600',
     fontSize: 16,
+  },
+  errorText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#ff3b30',
+    marginBottom: 20,
   },
 });
 

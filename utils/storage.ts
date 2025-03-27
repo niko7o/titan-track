@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ExerciseDetails, ExercisesStore, createCustomExercise } from '@/constants/exercises';
 
 const CUSTOM_EXERCISES_KEY = 'custom_exercises';
+const DELETED_CUSTOM_EXERCISES_KEY = 'deleted_custom_exercises';
 
 // Get all custom exercises
 export const getCustomExercises = async (): Promise<ExercisesStore> => {
@@ -39,12 +40,35 @@ export const saveCustomExercise = async (
   }
 };
 
+// Get list of deleted custom exercises
+export const getDeletedCustomExercises = async (): Promise<Record<string, ExerciseDetails>> => {
+  try {
+    const deletedExercises = await AsyncStorage.getItem(DELETED_CUSTOM_EXERCISES_KEY);
+    if (deletedExercises) {
+      return JSON.parse(deletedExercises);
+    }
+    return {};
+  } catch (error) {
+    console.error('Error loading deleted custom exercises:', error);
+    return {};
+  }
+};
+
 // Delete a custom exercise
 export const deleteCustomExercise = async (name: string): Promise<boolean> => {
   try {
     const customExercises = await getCustomExercises();
     
     if (customExercises[name]) {
+      // Store the deleted exercise in the deleted exercises list
+      const deletedExercises = await getDeletedCustomExercises();
+      deletedExercises[name] = { 
+        ...customExercises[name],
+        isDeleted: true 
+      };
+      await AsyncStorage.setItem(DELETED_CUSTOM_EXERCISES_KEY, JSON.stringify(deletedExercises));
+      
+      // Remove from active custom exercises
       delete customExercises[name];
       await AsyncStorage.setItem(CUSTOM_EXERCISES_KEY, JSON.stringify(customExercises));
       return true;
@@ -56,11 +80,14 @@ export const deleteCustomExercise = async (name: string): Promise<boolean> => {
   }
 };
 
-// Get merged exercises (built-in + custom)
+// Get merged exercises (built-in + custom + deleted custom)
 export const getMergedExercises = async (builtInExercises: ExercisesStore): Promise<ExercisesStore> => {
   const customExercises = await getCustomExercises();
+  const deletedCustomExercises = await getDeletedCustomExercises();
+  
   return {
     ...builtInExercises,
-    ...customExercises
+    ...customExercises,
+    ...deletedCustomExercises
   };
 }; 

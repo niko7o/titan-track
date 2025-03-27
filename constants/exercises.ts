@@ -4,6 +4,7 @@ export interface ExerciseDetails {
   media: any; // Changed from string to any to support both strings and require statements
   muscleGroup: string;
   isCustom?: boolean;
+  isDeleted?: boolean;
 }
 
 export type ExercisesStore = Record<string, ExerciseDetails>;
