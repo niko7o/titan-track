@@ -16,6 +16,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useIsFocused } from '@react-navigation/native';
 
 import { exerciseDetails as builtInExercises, ExerciseDetails, ExercisesStore } from '../constants/exercises';
 import { Colors } from '@/constants/Colors';
@@ -92,30 +93,39 @@ const NewSetScreen = () => {
   const [filteredExercises, setFilteredExercises] = useState<string[]>([]);
 
   const { height } = useWindowDimensions();
+  const isFocused = useIsFocused();
   
   // Drawer animations
   const drawerHeight = useRef(new Animated.Value(height)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   
-  // Load all exercises including custom ones
+  // Function to load all exercises including custom ones
+  const loadAllExercises = async () => {
+    setLoadingExercises(true);
+    try {
+      const mergedExercises = await getMergedExercises(builtInExercises);
+      setAllExercises(mergedExercises);
+      const allExerciseNames = Object.keys(mergedExercises);
+      setExercisesList(allExerciseNames);
+      setFilteredExercises(allExerciseNames);
+    } catch (error) {
+      console.error("Error loading exercises:", error);
+    } finally {
+      setLoadingExercises(false);
+    }
+  };
+  
+  // Load exercises on component mount
   useEffect(() => {
-    const loadAllExercises = async () => {
-      setLoadingExercises(true);
-      try {
-        const mergedExercises = await getMergedExercises(builtInExercises);
-        setAllExercises(mergedExercises);
-        const allExerciseNames = Object.keys(mergedExercises);
-        setExercisesList(allExerciseNames);
-        setFilteredExercises(allExerciseNames);
-      } catch (error) {
-        console.error("Error loading exercises:", error);
-      } finally {
-        setLoadingExercises(false);
-      }
-    };
-
     loadAllExercises();
   }, []);
+  
+  // Reload exercises when the screen comes into focus
+  useEffect(() => {
+    if (isFocused) {
+      loadAllExercises();
+    }
+  }, [isFocused]);
   
   // Group exercises by muscle group whenever allExercises changes
   useEffect(() => {
