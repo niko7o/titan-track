@@ -92,6 +92,7 @@ const NewSetScreen = () => {
   const [categories, setCategories] = useState<ExerciseCategory[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [filteredExercises, setFilteredExercises] = useState<string[]>([]);
+  const [historicMaxWeight, setHistoricMaxWeight] = useState<number | null>(null);
 
   const { height } = useWindowDimensions();
   const isFocused = useIsFocused();
@@ -556,6 +557,47 @@ const NewSetScreen = () => {
     </ScrollView>
   );
 
+  // Function to fetch max weight for current exercise
+  const fetchMaxWeight = async (exerciseName: string) => {
+    try {
+      const data = await AsyncStorage.getItem('completedExercises');
+      if (data) {
+        const exercises = JSON.parse(data);
+        // Filter exercises with the same name
+        const exerciseHistory = exercises.filter(
+          (ex: any) => ex.exercise === exerciseName
+        );
+        
+        // Find the max weight among all sets of all previous workouts
+        let maxWeight = 0;
+        
+        exerciseHistory.forEach((exercise: any) => {
+          exercise.completedSets.forEach((set: any) => {
+            if (set.weight > maxWeight) {
+              maxWeight = set.weight;
+            }
+          });
+        });
+        
+        setHistoricMaxWeight(maxWeight > 0 ? maxWeight : null);
+      } else {
+        setHistoricMaxWeight(null);
+      }
+    } catch (error) {
+      console.error('Error fetching max weight:', error);
+      setHistoricMaxWeight(null);
+    }
+  };
+  
+  // Load max weight when exercise is selected
+  useEffect(() => {
+    if (ongoingExercise) {
+      fetchMaxWeight(ongoingExercise.exercise);
+    } else {
+      setHistoricMaxWeight(null);
+    }
+  }, [ongoingExercise]);
+
   const renderOngoing = () => {
     if (!ongoingExercise) return null;
     
@@ -638,6 +680,12 @@ const NewSetScreen = () => {
                 <Text style={styles.setInputButtonText}>+</Text>
               </TouchableOpacity>
             </View>
+            {/* Display historic max weight if available */}
+            {historicMaxWeight !== null && (
+              <Text style={styles.maxWeightText}>
+                All time best: {historicMaxWeight.toFixed(2)} kg
+              </Text>
+            )}
           </View>
           
           <TouchableOpacity 
@@ -1492,6 +1540,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#666',
     fontSize: 16,
+  },
+  maxWeightText: {
+    fontSize: 12,
+    color: Colors.primaryBlue,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: 6,
   },
 });
 
