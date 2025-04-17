@@ -54,6 +54,11 @@ const HomeScreen = () => {
               return exercise;
             });
             
+            // Sort exercises by date in descending order (newest first)
+            parsedExercises.sort((a: CompletedExercise, b: CompletedExercise) => 
+              new Date(b.date).getTime() - new Date(a.date).getTime()
+            );
+            
             if (needsUpdate) {
               await AsyncStorage.setItem('completedExercises', JSON.stringify(parsedExercises));
               console.log('Updated exercises with IDs');
@@ -313,17 +318,24 @@ const HomeScreen = () => {
     </ScrollView>
   );
 
+  const formatDateWithOrdinal = (date: Date) => {
+    const day = date.getDate();
+    const suffix = (day % 10 === 1 && day !== 11) ? 'st' :
+                  (day % 10 === 2 && day !== 12) ? 'nd' :
+                  (day % 10 === 3 && day !== 13) ? 'rd' : 'th';
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+    const month = date.toLocaleDateString('en-US', { month: 'long' });
+    
+    return `${weekday}, ${day}${suffix} ${month}`;
+  };
+
   const renderExerciseItem = ({ item, index }: { item: CompletedExercise; index: number }) => (
     <View style={styles.exerciseCard}>
       <View style={styles.exerciseCardHeader}>
         <View>
           <Text style={styles.exerciseName}>{item.exercise}</Text>
           <Text style={styles.exerciseDate}>
-            {new Date(item.date).toLocaleDateString('en-US', { 
-              weekday: 'short', 
-              month: 'short', 
-              day: 'numeric' 
-            })}
+            {formatDateWithOrdinal(new Date(item.date))}
           </Text>
         </View>
         <View style={styles.actionButtons}>
