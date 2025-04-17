@@ -327,6 +327,20 @@ const NewSetScreen = () => {
     }
   };
 
+  const incrementWeightSmall = (setIndex: number) => {
+    if (ongoingExercise) {
+      const currentWeight = ongoingExercise.completedSets[setIndex].weight;
+      recordSet(setIndex, ongoingExercise.completedSets[setIndex].reps, currentWeight + 0.5);
+    }
+  };
+
+  const decrementWeightSmall = (setIndex: number) => {
+    if (ongoingExercise && ongoingExercise.completedSets[setIndex].weight >= 0.5) {
+      const currentWeight = ongoingExercise.completedSets[setIndex].weight;
+      recordSet(setIndex, ongoingExercise.completedSets[setIndex].reps, currentWeight - 0.5);
+    }
+  };
+
   const advanceToNextSet = () => {
     if (!ongoingExercise) return;
     
@@ -635,12 +649,9 @@ const NewSetScreen = () => {
                 <Text style={styles.setInputButtonText}>-</Text>
               </TouchableOpacity>
               
-              <TextInput
-                style={styles.setInputValue}
-                value={ongoingExercise.completedSets[activeSet].reps.toString()}
-                onChangeText={(text) => handleRepsChange(activeSet, text)}
-                keyboardType="numeric"
-              />
+              <Text style={styles.setInputValue}>
+                {ongoingExercise.completedSets[activeSet].reps.toString()}
+              </Text>
               
               <TouchableOpacity 
                 style={styles.setInputButton}
@@ -656,30 +667,45 @@ const NewSetScreen = () => {
           <View style={[styles.inputGroupVertical, styles.weightGroup]}>
             <Text style={styles.inputLabel}>Weight (kg)</Text>
             <View style={styles.setInputContainer}>
-              <TouchableOpacity 
-                style={styles.setInputButton}
-                onPress={() => decrementWeight(activeSet)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.setInputButtonText}>-</Text>
-              </TouchableOpacity>
+              <View style={styles.weightButtonGroup}>
+                <TouchableOpacity 
+                  style={styles.setInputButton}
+                  onPress={() => decrementWeight(activeSet)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.setInputButtonText}>-2.5</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.smallWeightButton}
+                  onPress={() => decrementWeightSmall(activeSet)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.smallWeightButtonText}>-0.5</Text>
+                </TouchableOpacity>
+              </View>
               
-              <TextInput
-                style={[styles.setInputValue, styles.weightInputValue]}
-                value={ongoingExercise.completedSets[activeSet].weight.toFixed(2)}
-                onChangeText={(text) => handleWeightChange(activeSet, text)}
-                keyboardType="numeric"
-                maxLength={7}
-              />
+              <Text style={[styles.setInputValue, styles.weightInputValue]}>
+                {ongoingExercise.completedSets[activeSet].weight.toFixed(2)}
+              </Text>
               
-              <TouchableOpacity 
-                style={styles.setInputButton}
-                onPress={() => incrementWeight(activeSet)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.setInputButtonText}>+</Text>
-              </TouchableOpacity>
+              <View style={styles.weightButtonGroup}>
+                <TouchableOpacity 
+                  style={styles.setInputButton}
+                  onPress={() => incrementWeight(activeSet)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.setInputButtonText}>+2.5</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.smallWeightButton}
+                  onPress={() => incrementWeightSmall(activeSet)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.smallWeightButtonText}>+0.5</Text>
+                </TouchableOpacity>
+              </View>
             </View>
+
             {/* Display historic max weight if available */}
             {historicMaxWeight !== null && (
               <Text style={styles.maxWeightText}>
@@ -1353,7 +1379,7 @@ const styles = StyleSheet.create({
   },
   setInputButtonText: {
     color: 'white',
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   setInputValue: {
@@ -1547,6 +1573,22 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
     marginTop: 6,
+  },
+  weightButtonGroup: {
+    alignItems: 'center',
+  },
+  smallWeightButton: {
+    backgroundColor: Colors.primaryBlue + '80', // 50% opacity
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    marginTop: 8,
+  },
+  smallWeightButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+    paddingVertical: 4,
   },
 });
 
