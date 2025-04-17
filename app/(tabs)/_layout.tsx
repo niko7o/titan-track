@@ -12,7 +12,7 @@ const Tab = createBottomTabNavigator();
 
 const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
   Home: 'home-outline',
-  Exercises: 'barbell-outline',
+  Exercises: 'fitness-outline',
   Analytics: 'stats-chart',
   'New set': 'add-circle',
 };
