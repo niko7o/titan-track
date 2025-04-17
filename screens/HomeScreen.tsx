@@ -7,7 +7,6 @@ import {
   TouchableOpacity, 
   Alert,
   StatusBar,
-  SafeAreaView,
   ActivityIndicator,
   FlatList,
   Modal,
@@ -177,6 +176,34 @@ const HomeScreen = () => {
     setEditedSets(updatedSets);
   };
 
+  const handleDeleteSet = (setIndex: number) => {
+    Alert.alert(
+      'Delete Set',
+      `Are you sure you'd like to delete set #${setIndex + 1}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          onPress: () => {
+            const updatedSets = [...editedSets];
+            updatedSets.splice(setIndex, 1);
+            setEditedSets(updatedSets);
+          },
+          style: 'destructive',
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const handleAddSet = () => {
+    const newSet = { reps: '0', weight: '0' };
+    setEditedSets([...editedSets, newSet]);
+  };
+
   const renderEditModal = () => {
     if (!editingExercise) return null;
     
@@ -227,10 +254,27 @@ const HomeScreen = () => {
                         maxLength={5}
                       />
                     </View>
+
+                    <TouchableOpacity
+                      style={styles.deleteSetButton}
+                      onPress={() => handleDeleteSet(index)}
+                    >
+                      <Ionicons name="trash-outline" size={20} color="#ff3b30" />
+                    </TouchableOpacity>
                   </View>
                 </View>
               ))}
             </ScrollView>
+            
+            <View style={styles.addSetContainer}>
+              <TouchableOpacity 
+                style={styles.addSetButton}
+                onPress={handleAddSet}
+              >
+                <Ionicons name="add-circle-outline" size={20} color={Colors.primaryBlue} />
+                <Text style={styles.addSetText}>Add Set</Text>
+              </TouchableOpacity>
+            </View>
             
             <View style={styles.modalFooter}>
               <TouchableOpacity
@@ -689,6 +733,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingBottom: 10,
+    alignItems: 'flex-end',
   },
   editSetField: {
     flex: 1,
@@ -733,6 +778,32 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: 'white',
     fontWeight: '500',
+  },
+  deleteSetButton: {
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 12,
+  },
+  addSetContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  addSetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginTop: 10,
+  },
+  addSetText: {
+    color: Colors.primaryBlue,
+    fontWeight: '500',
+    marginLeft: 8,
   },
 });
 

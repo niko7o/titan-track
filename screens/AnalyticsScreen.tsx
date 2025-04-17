@@ -216,10 +216,14 @@ const AnalyticsScreen = () => {
 
   const renderExerciseSelector = () => (
     <View style={styles.exerciseSelectorContainer}>
-      <Text style={styles.sectionTitle}>Exercises</Text>
-      <View style={styles.exerciseTagsContainer}>
-        {exerciseNames.length > 0 ? (
-          exerciseNames.map((exercise) => (
+      <Text style={styles.sectionTitle}>Exercises done</Text>
+      {exerciseNames.length > 0 ? (
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.exerciseTagsScrollContent}
+        >
+          {exerciseNames.map((exercise) => (
             <TouchableOpacity
               key={exercise}
               style={[
@@ -237,15 +241,15 @@ const AnalyticsScreen = () => {
                 {exercise}
               </Text>
             </TouchableOpacity>
-          ))
-        ) : (
-          <Text style={styles.noDataText}>
-            {selectedMuscleGroup 
-              ? `No exercises found for ${selectedMuscleGroup}`
-              : 'No workout data available yet'}
-          </Text>
-        )}
-      </View>
+          ))}
+        </ScrollView>
+      ) : (
+        <Text style={styles.noDataText}>
+          {selectedMuscleGroup 
+            ? `No exercises found for ${selectedMuscleGroup}`
+            : 'No workout data available yet'}
+        </Text>
+      )}
     </View>
   );
 
@@ -345,19 +349,19 @@ const AnalyticsScreen = () => {
                   <View style={styles.statCard}>
                     <Text style={styles.statValue}>
                       {chartData.length > 0 
-                        ? Math.max(...chartData.map(data => data.weight)).toFixed(1) 
-                        : '0'} kg
+                        ? Math.max(...chartData.map(data => data.weight)).toFixed(2) 
+                        : '0'}
                     </Text>
-                    <Text style={styles.statLabel}>Maximum Weight</Text>
+                    <Text style={styles.statLabel}>Maximum Weight (kg)</Text>
                   </View>
                   
                   <View style={styles.statCard}>
                     <Text style={styles.statValue}>
                       {chartData.length > 0 
-                        ? chartData[chartData.length - 1].weight.toFixed(1) 
-                        : '0'} kg
+                        ? chartData[chartData.length - 1].weight.toFixed(2) 
+                        : '0'}
                     </Text>
-                    <Text style={styles.statLabel}>Latest Weight</Text>
+                    <Text style={styles.statLabel}>Latest Weight (kg)</Text>
                   </View>
                   
                   <View style={styles.statCard}>
@@ -485,9 +489,10 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  exerciseTagsContainer: {
+  exerciseTagsScrollContent: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    paddingRight: 20,
+    paddingVertical: 4,
   },
   exerciseTag: {
     backgroundColor: '#f5f5f5',
@@ -495,7 +500,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     marginRight: 8,
-    marginBottom: 8,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   selectedExerciseTag: {
     backgroundColor: Colors.primaryBlue,
@@ -569,7 +576,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryBlue,
   },
   timeRangeText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666',
     fontWeight: '500',
   },

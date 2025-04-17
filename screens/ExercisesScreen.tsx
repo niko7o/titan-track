@@ -236,11 +236,7 @@ const ExercisesScreen = () => {
 
   const renderMuscleGroupFilter = () => (
     <View style={styles.filterContainer}>
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.muscleGroupContent}
-      >
+      <View style={styles.muscleGroupContent}>
         <TouchableOpacity
           style={[
             styles.muscleGroupButton,
@@ -277,7 +273,7 @@ const ExercisesScreen = () => {
             </Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
     </View>
   );
 
@@ -627,7 +623,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 12,
     paddingHorizontal: 16,
-    marginBottom: 20,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -651,12 +647,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   filterContainer: {
-    marginBottom: 20,
-    height: 40, // Fixed height for the filter container
+    marginBottom: 8,
   },
   muscleGroupContent: {
-    alignItems: 'center', // Center the chips vertically
-    paddingRight: 20,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
   },
   muscleGroupButton: {
     paddingHorizontal: 16,
@@ -664,7 +660,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#f0f0f0',
     marginRight: 8,
-    height: 36, // Fixed height for the chips
+    marginBottom: 8,
+    height: 36,
   },
   activeMuscleGroup: {
     backgroundColor: Colors.primaryBlue,
