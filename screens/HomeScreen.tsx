@@ -9,7 +9,9 @@ import {
   StatusBar,
   SafeAreaView,
   ActivityIndicator,
-  FlatList
+  FlatList,
+  Modal,
+  TextInput
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -22,12 +24,17 @@ interface CompletedExercise {
   plannedSets: number;
   completedSets: { reps: number; weight: number }[];
   date: string;
+  id?: string;
+  muscleGroup?: string;
 }
 
 const HomeScreen = () => {
   const [completedExercises, setCompletedExercises] = useState<CompletedExercise[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [editingExercise, setEditingExercise] = useState<{index: number, exercise: CompletedExercise} | null>(null);
+  const [editedSets, setEditedSets] = useState<{reps: string, weight: string}[]>([]);
+  const [isEditModalVisible, setIsEditModalVisible] = useState<boolean>(false);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -36,7 +43,23 @@ const HomeScreen = () => {
         try {
           const data = await AsyncStorage.getItem('completedExercises');
           if (data) {
-            setCompletedExercises(JSON.parse(data));
+            let parsedExercises = JSON.parse(data);
+            let needsUpdate = false;
+            
+            parsedExercises = parsedExercises.map((exercise: CompletedExercise) => {
+              if (!exercise.id) {
+                needsUpdate = true;
+                return { ...exercise, id: generateUniqueId() };
+              }
+              return exercise;
+            });
+            
+            if (needsUpdate) {
+              await AsyncStorage.setItem('completedExercises', JSON.stringify(parsedExercises));
+              console.log('Updated exercises with IDs');
+            }
+            
+            setCompletedExercises(parsedExercises);
           }
         } catch (error) {
           console.error('Failed to load completed exercises:', error);
@@ -49,7 +72,18 @@ const HomeScreen = () => {
     }, [])
   );
 
-  const deleteExercise = async (index: number) => {
+  const generateUniqueId = () => {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
+  };
+
+  const findExerciseIndex = (exerciseIdOrIndex: string | number): number => {
+    if (typeof exerciseIdOrIndex === 'number') {
+      return exerciseIdOrIndex;
+    }
+    return completedExercises.findIndex(ex => ex.id === exerciseIdOrIndex);
+  };
+
+  const deleteExercise = async (exerciseIdOrIndex: string | number) => {
     Alert.alert(
       'Delete Exercise',
       'Are you sure you want to delete this exercise?',
@@ -62,7 +96,11 @@ const HomeScreen = () => {
           text: 'Yes',
           onPress: async () => {
             try {
-              const updatedExercises = completedExercises.filter((_, i) => i !== index);
+              const index = findExerciseIndex(exerciseIdOrIndex);
+              if (index === -1) return;
+
+              const updatedExercises = [...completedExercises];
+              updatedExercises.splice(index, 1);
               setCompletedExercises(updatedExercises);
               await AsyncStorage.setItem('completedExercises', JSON.stringify(updatedExercises));
             } catch (error) {
@@ -75,7 +113,141 @@ const HomeScreen = () => {
     );
   };
 
-  // Group exercises by date for better organization
+  const editExercise = (exerciseIdOrIndex: string | number) => {
+    const index = findExerciseIndex(exerciseIdOrIndex);
+    if (index === -1) return;
+    
+    const exercise = completedExercises[index];
+    setEditingExercise({ index, exercise });
+    
+    const initialSets = exercise.completedSets.map(set => ({
+      reps: set.reps.toString(),
+      weight: set.weight.toString()
+    }));
+    
+    setEditedSets(initialSets);
+    setIsEditModalVisible(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingExercise) return;
+    
+    try {
+      const updatedSets = editedSets.map(set => ({
+        reps: parseInt(set.reps, 10) || 0,
+        weight: parseFloat(set.weight) || 0
+      }));
+      
+      const updatedExercise = {
+        ...editingExercise.exercise,
+        completedSets: updatedSets
+      };
+      
+      if (!updatedExercise.id) {
+        updatedExercise.id = generateUniqueId();
+      }
+      
+      const updatedExercises = [...completedExercises];
+      updatedExercises[editingExercise.index] = updatedExercise;
+      
+      setCompletedExercises(updatedExercises);
+      await AsyncStorage.setItem('completedExercises', JSON.stringify(updatedExercises));
+      
+      setIsEditModalVisible(false);
+      setEditingExercise(null);
+    } catch (error) {
+      console.error('Failed to save edited exercise:', error);
+      Alert.alert('Error', 'Failed to save changes');
+    }
+  };
+
+  const handleUpdateSet = (index: number, field: 'reps' | 'weight', value: string) => {
+    const updatedSets = [...editedSets];
+    
+    updatedSets[index] = {
+      ...updatedSets[index],
+      [field]: value
+    };
+    
+    setEditedSets(updatedSets);
+  };
+
+  const renderEditModal = () => {
+    if (!editingExercise) return null;
+    
+    return (
+      <Modal
+        visible={isEditModalVisible}
+        transparent={true}
+        onRequestClose={() => setIsEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit {editingExercise.exercise.exercise}</Text>
+              <TouchableOpacity
+                onPress={() => setIsEditModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalBody}>
+              {editedSets.map((set, index) => (
+                <View key={index} style={styles.editSetRow}>
+                  <View style={styles.setNumberContainer}>
+                    <Text style={styles.setNumber}>{index + 1}</Text>
+                  </View>
+                  
+                  <View style={styles.editSetFields}>
+                    <View style={styles.editSetField}>
+                      <Text style={styles.editSetLabel}>Reps</Text>
+                      <TextInput
+                        style={styles.editSetInput}
+                        value={set.reps}
+                        onChangeText={(value) => handleUpdateSet(index, 'reps', value)}
+                        keyboardType="numeric"
+                        maxLength={3}
+                      />
+                    </View>
+                    
+                    <View style={styles.editSetField}>
+                      <Text style={styles.editSetLabel}>Weight (kg)</Text>
+                      <TextInput
+                        style={styles.editSetInput}
+                        value={set.weight}
+                        onChangeText={(value) => handleUpdateSet(index, 'weight', value)}
+                        keyboardType="decimal-pad"
+                        maxLength={5}
+                      />
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+            
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setIsEditModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSaveEdit}
+              >
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   const groupedExercises = completedExercises.reduce((acc, exercise) => {
     const date = new Date(exercise.date).toLocaleDateString();
     if (!acc[date]) {
@@ -85,12 +257,10 @@ const HomeScreen = () => {
     return acc;
   }, {} as Record<string, CompletedExercise[]>);
 
-  // Get dates sorted by most recent first
   const dates = Object.keys(groupedExercises).sort((a, b) => 
     new Date(b).getTime() - new Date(a).getTime()
   );
 
-  // Calculate stats for the dashboard
   const totalWorkouts = dates.length;
   const totalExercises = completedExercises.length;
   const totalSets = completedExercises.reduce(
@@ -156,12 +326,20 @@ const HomeScreen = () => {
             })}
           </Text>
         </View>
-        <TouchableOpacity 
-          style={styles.deleteButton}
-          onPress={() => deleteExercise(index)}
-        >
-          <Ionicons name="trash-outline" size={20} color="#ff3b30" />
-        </TouchableOpacity>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity 
+            style={styles.editButton}
+            onPress={() => editExercise(item.id || index)}
+          >
+            <Ionicons name="pencil-outline" size={20} color={Colors.primaryBlue} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.deleteButton}
+            onPress={() => deleteExercise(item.id || index)}
+          >
+            <Ionicons name="trash-outline" size={20} color="#ff3b30" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.setsContainer}>
@@ -200,7 +378,6 @@ const HomeScreen = () => {
       );
     }
 
-    // Filter exercises by selected date if needed
     const filteredExercises = selectedDate 
       ? completedExercises.filter(ex => 
           new Date(ex.date).toLocaleDateString() === selectedDate
@@ -239,7 +416,7 @@ const HomeScreen = () => {
           <FlatList
             data={filteredExercises}
             renderItem={renderExerciseItem}
-            keyExtractor={(_, index) => index.toString()}
+            keyExtractor={(item) => item.id || item.date}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.exercisesList}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -256,6 +433,8 @@ const HomeScreen = () => {
       <View style={styles.contentContainer}>
         {renderContent()}
       </View>
+      
+      {renderEditModal()}
     </View>
   );
 };
@@ -398,6 +577,13 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  editButton: {
+    padding: 4,
+  },
   deleteButton: {
     padding: 4,
   },
@@ -438,6 +624,103 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#f0f0f0',
     marginVertical: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    width: '100%',
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 20,
+    maxHeight: 400,
+  },
+  editSetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  editSetFields: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: 10,
+  },
+  editSetField: {
+    flex: 1,
+    marginRight: 8,
+  },
+  editSetLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  editSetInput: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 16,
+    color: '#333',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  cancelButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginRight: 8,
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontWeight: '500',
+  },
+  saveButton: {
+    backgroundColor: Colors.primaryBlue,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontWeight: '500',
   },
 });
 

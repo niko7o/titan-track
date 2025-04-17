@@ -26,6 +26,7 @@ interface OngoingExercise {
   exercise: string;
   plannedSets: number;
   completedSets: { reps: number; weight: number }[];
+  id?: string;
 }
 
 interface ExerciseCategory {
@@ -388,18 +389,43 @@ const NewSetScreen = () => {
     }
   };
 
+  // Generate a unique ID function
+  const generateUniqueId = () => {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
+  };
+
+  // In the completeSet function, add a unique ID when saving
   const completeSet = async () => {
     if (ongoingExercise) {
       const completedExercise = {
         ...ongoingExercise,
         date: new Date().toISOString(),
         muscleGroup: allExercises[ongoingExercise.exercise]?.muscleGroup || '',
+        id: generateUniqueId(), // Add unique ID
       };
       try {
         const existingData = await AsyncStorage.getItem('completedExercises');
-        const exercises = existingData ? JSON.parse(existingData) : [];
+        let exercises = existingData ? JSON.parse(existingData) : [];
+        
+        // Ensure all existing exercises have IDs for backwards compatibility
+        let needsUpdate = false;
+        exercises = exercises.map((ex: any) => {
+          if (!ex.id) {
+            needsUpdate = true;
+            return { ...ex, id: generateUniqueId() };
+          }
+          return ex;
+        });
+        
+        // Add the new exercise
         exercises.push(completedExercise);
+        
+        // Save all exercises
         await AsyncStorage.setItem('completedExercises', JSON.stringify(exercises));
+        if (needsUpdate) {
+          console.log('Updated existing exercises with IDs');
+        }
+        
         Alert.alert('Success', 'Exercise set completed and saved!');
         setOngoingExercise(null);
       } catch (error) {
